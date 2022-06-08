@@ -1,0 +1,45 @@
+//Write a trigger on the Account when the Account is updated check all opportunities related to the account. 
+//Update all Opportunities Stage to close lost if an opportunity created date is greater than 30 days from today and stage not equal to close won.
+
+//Apex code 
+
+public class Scenario2Delete {
+	
+    public static void updateOpportunitiesStage(List<Account> listOFAccount){
+        system.debug(listOFAccount);
+        DateTime d = system.now()-30;
+        set<id> ids = new set<id>();
+        
+        
+        for(Account acc : listOFAccount){
+            ids.add(acc.Id);
+        }
+        system.debug(ids);
+        
+        list<Opportunity> listOfOpportunities = new list<Opportunity>();
+        listOfOpportunities = [SELECT Id, AccountId, StageName, CreatedDate, 
+                               CloseDate FROM Opportunity WHERE AccountId IN :ids ];
+        system.debug(listOfOpportunities);
+        
+        for(Opportunity opp : listOfOpportunities){
+            if(opp.CreatedDate < d && opp.StageName != 'Closed Won'){
+                opp.StageName  = 'Closed Lost';
+                opp.CloseDate = system.today();
+            }
+        }
+        update listOfOpportunities;
+    }
+    
+}
+
+
+// related trigger
+trigger Scenario2DeleteTrigger on Account (After update) {
+	
+    switch on trigger.operationType{
+        
+        when AFTER_UPDATE {
+            Scenario2Delete.updateOpportunitiesStage(trigger.new);
+        }
+    }
+}
