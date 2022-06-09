@@ -1,0 +1,64 @@
+//Once an Account will update then that Account will update with the total amount from All its Opportunities on the Account Level.
+//The account field name would be ” Total Opportunity Amount “.
+
+// Apex Code 
+
+public class Scenario3Delete {
+
+    public static void UpdateOpportunityInAccount(list<Account> listOfAccount){
+        
+        //Collecting a set of id from trigger class
+        set<id> accId = new set<id>();
+        for(Account acc : listOfAccount){
+            accId.add(acc.Id);
+        }
+        
+        
+        //Since we are using Aggregate Functions in the Query , So storing the result in the AggregateResult Class
+        //Using Sum(Amount) Alias as Total Amount;
+        AggregateResult[] OppotunityRelatedToAccountList= [SELECT AccountId , SUM(Amount) TotalAmount FROM Opportunity 
+                                                            WHERE AccountId IN :accId GROUP BY AccountId];
+        
+        
+        //Making a map of Account 
+        map<id,Double> accountMap = new map<id , Double>();
+        
+        for(AggregateResult opp : OppotunityRelatedToAccountList ){
+            id accountId = (Id)opp.get('AccountId');
+            double Amount = (Double)opp.get('TotalAmount');
+            // putting the id and amount into the accountMap
+            accountMap.put(accountId, Amount);
+			           
+        }
+        
+        for(Account acc : listOfAccount){
+            if(accountMap.containskey(acc.Id)){
+                acc.Total_Opportunity_Amount__c = accountMap.get(acc.Id);
+            }
+        }
+        
+		
+        
+        
+    }
+    
+        
+	
+}
+
+// Trigger class 
+
+trigger Scenario3DeleteTrigger on Account (before update) {
+	
+    switch on trigger.operationType {
+        when BEFORE_UPDATE {
+            
+            Scenario3Delete.UpdateOpportunityInAccount(trigger.new);
+        }
+        
+    }
+}
+
+
+
+
